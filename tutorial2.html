@@ -1,0 +1,140 @@
+<html>
+<body>
+  <p id ="output" > </p>
+  <script>
+
+    dumpCLData();
+
+function dumpCLData () {
+  var s = "";
+  try {
+    // First check if the webcl extension is installed at all
+                
+    if (window.webcl == undefined) {
+      alert("Unfortunately your system does not support webcl. " +
+            "Make sure that you have both the OpenCL driver " +
+            "and the webcl browser extension installed.");
+      return false;
+    }
+    
+    // List of OpenCL information parameter names.
+
+    var infos = [ [ "DEVICE_ADDRESS_BITS", webcl.DEVICE_ADDRESS_BITS ],
+      [ "DEVICE_AVAILABLE", webcl.DEVICE_AVAILABLE ],
+      [ "DEVICE_COMPILER_AVAILABLE", webcl.DEVICE_COMPILER_AVAILABLE ],
+      [ "DEVICE_ENDIAN_LITTLE", webcl.DEVICE_ENDIAN_LITTLE ],
+      [ "DEVICE_ERROR_CORRECTION_SUPPORT", webcl.DEVICE_ERROR_CORRECTION_SUPPORT ],
+      [ "DEVICE_EXECUTION_CAPABILITIES", webcl.DEVICE_EXECUTION_CAPABILITIES ],
+      [ "DEVICE_EXTENSIONS", webcl.DEVICE_EXTENSIONS ],
+      [ "DEVICE_GLOBAL_MEM_CACHE_SIZE", webcl.DEVICE_GLOBAL_MEM_CACHE_SIZE ],
+      [ "DEVICE_GLOBAL_MEM_CACHE_TYPE", webcl.DEVICE_GLOBAL_MEM_CACHE_TYPE ],
+      [ "DEVICE_GLOBAL_MEM_CACHELINE_SIZE", webcl.DEVICE_GLOBAL_MEM_CACHELINE_SIZE ],
+      [ "DEVICE_GLOBAL_MEM_SIZE", webcl.DEVICE_GLOBAL_MEM_SIZE ],
+      [ "DEVICE_HALF_FP_CONFIG", webcl.DEVICE_HALF_FP_CONFIG ],
+      [ "DEVICE_IMAGE_SUPPORT", webcl.DEVICE_IMAGE_SUPPORT ],
+      [ "DEVICE_IMAGE2D_MAX_HEIGHT", webcl.DEVICE_IMAGE2D_MAX_HEIGHT ],
+      [ "DEVICE_IMAGE2D_MAX_WIDTH", webcl.DEVICE_IMAGE2D_MAX_WIDTH ],
+      [ "DEVICE_IMAGE3D_MAX_DEPTH", webcl.DEVICE_IMAGE3D_MAX_DEPTH ],
+      [ "DEVICE_IMAGE3D_MAX_HEIGHT", webcl.DEVICE_IMAGE3D_MAX_HEIGHT ],
+      [ "DEVICE_IMAGE3D_MAX_WIDTH", webcl.DEVICE_IMAGE3D_MAX_WIDTH ],
+      [ "DEVICE_LOCAL_MEM_SIZE", webcl.DEVICE_LOCAL_MEM_SIZE ],
+      [ "DEVICE_LOCAL_MEM_TYPE", webcl.DEVICE_LOCAL_MEM_TYPE ],
+      [ "DEVICE_MAX_CLOCK_FREQUENCY", webcl.DEVICE_MAX_CLOCK_FREQUENCY ],
+      [ "DEVICE_MAX_COMPUTE_UNITS", webcl.DEVICE_MAX_COMPUTE_UNITS ],
+      [ "DEVICE_MAX_CONSTANT_ARGS", webcl.DEVICE_MAX_CONSTANT_ARGS ],
+      [ "DEVICE_MAX_CONSTANT_BUFFER_SIZE", webcl.DEVICE_MAX_CONSTANT_BUFFER_SIZE ],
+      [ "DEVICE_MAX_MEM_ALLOC_SIZE", webcl.DEVICE_MAX_MEM_ALLOC_SIZE ],
+      [ "DEVICE_MAX_PARAMETER_SIZE", webcl.DEVICE_MAX_PARAMETER_SIZE ],
+      [ "DEVICE_MAX_READ_IMAGE_ARGS", webcl.DEVICE_MAX_READ_IMAGE_ARGS ],
+      [ "DEVICE_MAX_SAMPLERS", webcl.DEVICE_MAX_SAMPLERS ],
+      [ "DEVICE_MAX_WORK_GROUP_SIZE", webcl.DEVICE_MAX_WORK_GROUP_SIZE ],
+      [ "DEVICE_MAX_WORK_ITEM_DIMENSIONS", webcl.DEVICE_MAX_WORK_ITEM_DIMENSIONS ],
+      [ "DEVICE_MAX_WORK_ITEM_SIZES", webcl.DEVICE_MAX_WORK_ITEM_SIZES ],
+      [ "DEVICE_MAX_WRITE_IMAGE_ARGS", webcl.DEVICE_MAX_WRITE_IMAGE_ARGS ],
+      [ "DEVICE_MEM_BASE_ADDR_ALIGN", webcl.DEVICE_MEM_BASE_ADDR_ALIGN ],
+      [ "DEVICE_NAME", webcl.DEVICE_NAME ],
+      [ "DEVICE_PLATFORM", webcl.DEVICE_PLATFORM ],
+      [ "DEVICE_PREFERRED_VECTOR_WIDTH_CHAR", webcl.DEVICE_PREFERRED_VECTOR_WIDTH_CHAR ],
+      [ "DEVICE_PREFERRED_VECTOR_WIDTH_SHORT", webcl.DEVICE_PREFERRED_VECTOR_WIDTH_SHORT ],
+      [ "DEVICE_PREFERRED_VECTOR_WIDTH_INT", webcl.DEVICE_PREFERRED_VECTOR_WIDTH_INT ],
+      [ "DEVICE_PREFERRED_VECTOR_WIDTH_LONG", webcl.DEVICE_PREFERRED_VECTOR_WIDTH_LONG ],
+      [ "DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT", webcl.DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT ],
+      [ "DEVICE_PROFILE", webcl.DEVICE_PROFILE ],
+      [ "DEVICE_PROFILING_TIMER_RESOLUTION", webcl.DEVICE_PROFILING_TIMER_RESOLUTION ],
+      [ "DEVICE_QUEUE_PROPERTIES", webcl.DEVICE_QUEUE_PROPERTIES ],
+      [ "DEVICE_SINGLE_FP_CONFIG", webcl.DEVICE_SINGLE_FP_CONFIG ],
+      [ "DEVICE_TYPE", webcl.DEVICE_TYPE ],
+      [ "DEVICE_VENDOR", webcl.DEVICE_VENDOR ],
+      [ "DEVICE_VENDOR_ID", webcl.DEVICE_VENDOR_ID ],
+      [ "DEVICE_VERSION", webcl.DEVICE_VERSION ],
+      [ "DRIVER_VERSION", webcl.DRIVER_VERSION ] ];
+    
+    
+    // Get a list of available CL platforms, and another list of the
+    // available devices on each platform. Platform and device information 
+    // is inquired into string s.
+
+    var platforms = webcl.getPlatforms ();
+    s += "Found " + platforms.length + " platform"
+        + (platforms.length == 1 ? "" : "s")
+        + "." + "<br><br>";
+    for (var i in platforms) {
+      var plat = platforms[i];
+
+      var name = plat.getInfo (webcl.PLATFORM_NAME);
+      s += "[" + i + "] \"<b>" + name + "</b>\"<br>";
+      s += "<div style='padding-left:2em;'>";
+      s += "<b>vendor:</b> " 
+        + plat.getInfo (webcl.PLATFORM_VENDOR) + "<br>";
+      s += "<b>version:</b> " 
+        + plat.getInfo (webcl.PLATFORM_VERSION) + "<br>";
+      s += "<b>profile:</b> " 
+        + plat.getInfo (webcl.PLATFORM_PROFILE) + "<br>";
+      s += "<b>extensions:</b> " 
+        + plat.getInfo (webcl.PLATFORM_EXTENSIONS) + "<br>";
+
+      var devices = plat.getDevices ();
+      s += "<b>Devices:</b> " + devices.length + "<br>";
+      for (var j in devices) {
+        var dev = devices[j];
+        s += "[" + j + "] \"<b>" + dev.getInfo(webcl.DEVICE_NAME) 
+          + "</b>\"<br>";
+        s += "<div style='padding-left:2em;'>";
+
+        for (var k in infos) {
+          s += infos[k][0] + ":   ";
+          try {
+            if (infos[k][1] == webcl.DEVICE_PLATFORM) {
+              s += "<b>" 
+                + dev.getInfo(infos[k][1]).getInfo(webcl.PLATFORM_NAME) 
+                + "</b>";
+            } else {
+              s += "<b>" + dev.getInfo(infos[k][1]) + "</b>";
+            }
+          } catch (e) {
+            s += "<b>Info not available</b>";
+          }
+          s += "<br>";
+        }
+        s += "</div>";
+      }
+      s += "</div>";
+    }
+    
+    // String s is printed out to div element output
+
+    var output = document.getElementById ("output");
+    output.innerHTML = s + "<br>";
+  } catch(e) {
+    var output = document.getElementById ("output");
+    output.innerHTML = s + "<br>";
+    output.innerHTML += "<b>Error:</b> <pre style='color:red;'>"
+                     + e.toString()+"</pre>";
+    throw e;
+  }
+}
+  
+  </script>
+
+</body>
+</html>
