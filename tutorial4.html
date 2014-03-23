@@ -1,0 +1,178 @@
+<html>
+
+<head>
+<style>
+#canvasImg{
+
+  background:#f00;
+
+}
+</style>
+</head>
+<body>
+
+<img src="ss1.png" width="3000" height="1620" id="srcimg"/>
+
+<canvas id="canvasImg" background="#f00"></canvas>
+<p id="output"> HEL </p>
+
+<script id="clProgramDesaturate" type="text/x-opencl">
+
+  kernel void clDesaturate(
+    global const uchar4* src,
+    global uchar4* dst,
+    uint width, 
+    uint height
+  ){
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    if (x >= width || y >= height) return;
+
+    int i = y * width + x;
+
+    uchar4 color = src[i];
+    uchar lum = (uchar)(0.30f * color.x + 0.59f * color.y + 0.11f * color.z);
+    dst[i] = (uchar4)(lum, lum, lum, 255);
+  }
+
+
+</script>          
+<script>
+
+
+  console.log('HSDs' );
+ // setupCanvas();
+
+  function setupCanvas () {
+    try {
+      var canvasImg = document.getElementById("canvasImg");
+      var canvasImgCtx = canvasImg.getContext("2d");
+      var srcImg = document.getElementById("srcimg");
+      console.log(srcImg );
+      canvasImg.width = srcImg.width;
+      canvasImg.height = srcImg.height;
+      console.log( canvasImg.height );
+      canvasImgCtx.drawImage (srcImg, 0, 0 , srcImg.width , srcImg.height );
+    } catch(e) {
+      document.getElementById("output").innerHTML += 
+        "<h3>ERROR:</h3><pre style=\"color:red;\">" + e.message + "</pre>";
+      throw e;
+    }
+  }
+
+   function loadKernel(id){
+      var kernelElement = document.getElementById(id);
+      var kernelSource = kernelElement.text;
+      if (kernelElement.src != "") {
+          var mHttpReq = new XMLHttpRequest();
+          mHttpReq.open("GET", kernelElement.src, false);
+          mHttpReq.send(null);
+          kernelSource = mHttpReq.responseText;
+      } 
+      return kernelSource;
+    }
+
+
+
+  function desaturate () {
+
+    // All output is written to element by id "output"
+    var output = document.getElementById("output");
+    output.innerHTML = "";
+
+    try {
+
+      // First check if the webcl extension is installed at all 
+      if (window.webcl == undefined) {
+        alert("Unfortunately your system does not support webcl. " +
+              "Make sure that you have both the OpenCL driver " +
+              "and the webcl browser extension installed.");
+        return false;
+      }
+
+      // Get pixel data from canvas
+      var canvasImg = document.getElementById("canvasImg");
+      var canvasImgCtx = canvasImg.getContext("2d");
+      var width = canvasImg.width;
+      var height = canvasImg.height;
+      var pixels = canvasImgCtx.getImageData(0, 0, width, height);
+
+      // Dimm the existing canvas to highlight any errors we might get.
+      // This does not affect the already retrieved pixel data.
+      canvasImgCtx.fillStyle = "rgba(0,0,0,0.7)";
+      canvasImgCtx.fillRect(0, 0, width, height);
+      
+      // Setup webcl context using the default device
+      var ctx = webcl.createContext();
+
+      // Setup buffers
+      var imgSize = width * height;
+      output.innerHTML += "<br>Image size: " + imgSize + " pixels ("
+                       + width + " x " + height + ")";
+      var bufSize = imgSize * 4; // size in bytes
+      output.innerHTML += "<br>Buffer size: " + bufSize + " bytes";
+      
+      var bufIn = ctx.createBuffer (webcl.MEM_READ_ONLY, bufSize);
+      var bufOut = ctx.createBuffer (webcl.MEM_WRITE_ONLY, bufSize);
+
+       // Create and build program
+      var kernelSrc = loadKernel("clProgramDesaturate");
+      var program = ctx.createProgram(kernelSrc);
+      var device = ctx.getInfo(webcl.CONTEXT_DEVICES)[0];
+      try {
+        program.build ([device], "");
+      } catch(e) {
+        alert ("Failed to build webcl program. Error "
+               + program.getBuildInfo (device, 
+                                              webcl.PROGRAM_BUILD_STATUS)
+               + ":  " + program.getBuildInfo (device, 
+                                                      webcl.PROGRAM_BUILD_LOG));
+        throw e;
+      }
+
+      // Create kernel and set arguments
+      var kernel = program.createKernel ("clDesaturate");
+      kernel.setArg (0, bufIn);
+      kernel.setArg (1, bufOut);
+      kernel.setArg (2, new Uint32Array([width]));
+      kernel.setArg (3, new Uint32Array([height]));
+
+      // Create command queue using the first available device
+      var cmdQueue = ctx.createCommandQueue (device);
+
+      // Write the buffer to OpenCL device memory
+      cmdQueue.enqueueWriteBuffer (bufIn, false, 0, bufSize, pixels.data);
+
+      // Init ND-range 
+      var localWS = [16,4];  
+      var globalWS = [Math.ceil (width / localWS[0]) * localWS[0], 
+                      Math.ceil (height / localWS[1]) * localWS[1]];
+      
+      output.innerHTML += "<br>work group dimensions: 2";
+      for (var i = 0; i < 2; ++i)
+        output.innerHTML += "<br>global work item size[" + i + "]: " + globalWS[i];
+      for (var i = 0; i < 2; ++i)
+        output.innerHTML += "<br>local work item size[" + i + "]: " + localWS[i];
+      
+      // Execute (enqueue) kernel
+      cmdQueue.enqueueNDRangeKernel(kernel, 2, [], 
+                                    globalWS, localWS);
+
+      // Read the result buffer from OpenCL device
+      cmdQueue.enqueueReadBuffer (bufOut, false, 0, bufSize, pixels.data);
+      cmdQueue.finish (); //Finish all the operations
+      
+      canvasImgCtx.putImageData (pixels, 0, 0);
+
+      output.innerHTML += "<br>Done.";
+    } catch(e) {
+      document.getElementById("output").innerHTML += 
+        "<h3>ERROR:</h3><pre style=\"color:red;\">" + e.message + "</pre>";
+      throw e;
+    }
+  }     
+
+</script>
+
+</body>
+</html>

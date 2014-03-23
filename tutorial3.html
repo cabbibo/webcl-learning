@@ -79,7 +79,9 @@
         // Create and build program for the first device
         var kernelSrc = loadKernel("clProgramVectorAdd");
         var program = ctx.createProgram(kernelSrc);
-        var device = ctx.getInfo(webcl.CONTEXT_DEVICES)[0];
+        var device = ctx.getInfo(webcl.CONTEXT_DEVICES)[1];
+
+        console.log( device );
 
         console.log( 'CHECKPOINT_2' );
 
